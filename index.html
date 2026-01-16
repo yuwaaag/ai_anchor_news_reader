@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>PTN News - Animated Broadcast</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; color: white; }
+        
+        .studio { 
+            position: relative; 
+            width: 100vw; 
+            height: 100vh; 
+            background: url('studio.jpg') center/cover no-repeat; 
+            background-size: cover; 
+            animation: fadeIn 2s ease-out;
+        }
+
+        /* दाईं तरफ का न्यूज़ विज़ुअल बॉक्स */
+        .visual-box { 
+            position: absolute; right: 5%; top: 10%; width: 40%; height: 38%; 
+            border: 5px solid #00f2ff; border-radius: 15px; overflow: hidden; 
+            box-shadow: 0 0 40px rgba(0, 242, 255, 0.7); z-index: 5;
+            animation: slideInRight 1s ease-out;
+        }
+        #newsImg { 
+            width: 100%; height: 100%; object-fit: cover; 
+            transition: opacity 1s ease-in-out, transform 0.5s ease-out; /* Smooth transition for image change */
+        }
+
+        /* बाईं तरफ की स्क्रॉलिंग स्क्रिप्ट विंडो */
+        .script-window { 
+            position: absolute; left: 5%; top: 10%; width: 38%; height: 55%; 
+            background: rgba(0, 0, 0, 0.7); border-left: 8px solid #ff0000; 
+            padding: 25px; box-sizing: border-box; z-index: 5; overflow: hidden;
+            animation: slideInLeft 1s ease-out;
+        }
+        
+        #teleprompter { 
+            position: relative; font-size: 32px; line-height: 1.8; 
+            color: #ffffff; text-align: left;
+            top: 100%; /* Start from bottom */
+        }
+
+        /* एंकर वीडियो */
+        .anchor-container { 
+            position: absolute; right: 0; bottom: 0; width: 55%; height: 95%; 
+            z-index: 10; pointer-events: none;
+            animation: slideInBottom 1s ease-out;
+        }
+        #anchorVid { width: 100%; height: 100%; object-fit: contain; }
+
+        /* नीचे की लाल पट्टी (टिकर) */
+        .ticker-bar { 
+            position: absolute; bottom: 0; width: 100%; height: 80px; 
+            background: linear-gradient(90deg, #ff0000 0%, #cc0000 100%); 
+            display: flex; align-items: center; z-index: 20; border-top: 4px solid #fff;
+            box-shadow: 0 -5px 20px rgba(255, 0, 0, 0.5);
+        }
+        marquee { 
+            font-size: 38px; font-weight: bold; width: 100%; 
+            color: #ffffff; text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+
+        /* Basic Animations */
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+        @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes slideInBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    </style>
+</head>
+<body>
+
+<div class="studio">
+    <div class="visual-box"><img id="newsImg" src="https://image.pollinations.ai/prompt/news%20broadcast%20graphics?nologo=true"></div>
+
+    <div class="script-window">
+        <div id="teleprompter">PTN NEWS: अपनी Google Sheet लिंक डालें और क्लिक करें...</div>
+    </div>
+
+    <div class="anchor-container"><video id="anchorVid" muted loop><source src="anchor_video.mp4" type="video/mp4"></video></div>
+    <div class="ticker-bar"><marquee scrollamount="12" id="flashTicker">PTN NEWS: Loading data from Google Sheets...</marquee></div>
+</div>
+
+<script>
+    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZcfTxhcB7LltOPkXuTBsQ4CRNa2KZfb6EQ2lxx-eXFVhACj3YI4mH4tSeTSx-K_Wf1sgk0419ZDkf/pub?output=csv"; // 🔴 अपनी Google Sheet CSV लिंक यहाँ पेस्ट करें
+
+    let newsItems = [];
+    let currentNewsIndex = 0;
+    let visualChangeInterval; // For auto-changing visuals
+
+    async function loadNewsData() {
+        try {
+            const response = await fetch(csvUrl);
+            const data = await response.text();
+            
+            const rows = data.split('\n').slice(1); 
+            newsItems = rows.map(row => {
+                const parts = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                return {
+                    script: parts[0]?.replace(/"/g, "") || "",
+                    visualKeywords: parts[1]?.replace(/"/g, "") || "",
+                    flashText: parts[2]?.replace(/"/g, "") || ""
+                };
+            }).filter(item => item.script); // खाली स्क्रिप्ट वाली एंट्री हटा दें
+
+            if (newsItems.length > 0) {
+                document.getElementById("teleprompter").innerText = "क्लिक करके न्यूज़ शुरू करें!";
+                document.getElementById("flashTicker").innerText = "PTN NEWS: लोड हो गया है।";
+            } else {
+                document.getElementById("teleprompter").innerText = "कोई खबर नहीं मिली! शीट चेक करें।";
+            }
+        } catch (e) {
+            document.getElementById("teleprompter").innerText = "एरर: शीट लोड नहीं हुई! लिंक या शेयरिंग चेक करें।";
+            console.error("Error loading CSV:", e);
+        }
+    }
+
+    function generateRandomVisualPrompt(baseKeyword) {
+        const variants = [
+            `${baseKeyword} - realistic news scene`,
+            `${baseKeyword} - dramatic news report`,
+            `${baseKeyword} - infographic style`,
+            `${baseKeyword} - on a TV screen background`,
+            `${baseKeyword} - breaking news banner`
+        ];
+        return variants[Math.floor(Math.random() * variants.length)];
+    }
+
+    function startBroadcasting() {
+        if (newsItems.length === 0) {
+            document.getElementById("teleprompter").innerText = "कोई खबर नहीं है!";
+            return;
+        }
+
+        const currentStory = newsItems[currentNewsIndex];
+        const prompterDiv = document.getElementById("teleprompter");
+        const newsImage = document.getElementById("newsImg");
+        const flashTicker = document.getElementById("flashTicker");
+        const anchorVideo = document.getElementById("anchorVid");
+
+        // UI अपडेट्स
+        prompterDiv.innerText = currentStory.script;
+        flashTicker.innerText = "ब्रेकिंग: " + currentStory.flashText;
+        
+        // विजुअल चेंजर शुरू करें
+        let visualCounter = 0;
+        clearInterval(visualChangeInterval); // पुराना इंटरवल साफ करें
+        visualChangeInterval = setInterval(() => {
+            const prompt = generateRandomVisualPrompt(currentStory.visualKeywords);
+            newsImage.style.opacity = 0.2; // Dim out for transition
+            setTimeout(() => {
+                newsImage.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true&width=800&height=450`;
+                newsImage.style.opacity = 1; // Fade in new image
+            }, 500); // 0.5s fade effect
+            visualCounter++;
+        }, 15000); // हर 15 सेकंड में फोटो बदलेगी
+
+        // टेलीप्रॉम्प्टर स्क्रॉलिंग
+        prompterDiv.style.top = "100%"; // Start from bottom
+        prompterDiv.style.transition = 'none'; // No transition for reset
+        prompterDiv.offsetHeight; // Force reflow
+        
+        window.speechSynthesis.cancel();
+        const speechUtterance = new SpeechSynthesisUtterance(currentStory.script);
+        speechUtterance.lang = 'hi-IN';
+        speechUtterance.rate = 0.95; // Speaking speed
+
+        speechUtterance.onstart = () => {
+            anchorVideo.play();
+            // Calculate scroll duration based on script length and speaking rate
+            const words = currentStory.script.split(' ').length;
+            const avgWordDuration = 60 / (150 * speechUtterance.rate); // Approx 150 words per minute at rate 1
+            const totalScrollDuration = words * avgWordDuration * 1000; // in milliseconds
+
+            prompterDiv.style.transition = `top ${totalScrollDuration / 1000}s linear`;
+            prompterDiv.style.top = `-${prompterDiv.offsetHeight}px`; // Scroll to top
+        };
+
+        speechUtterance.onend = () => {
+            anchorVideo.pause();
+            clearInterval(visualChangeInterval); // स्टॉप विजुअल चेंजर
+            currentNewsIndex = (currentNewsIndex + 1) % newsItems.length;
+            setTimeout(startBroadcasting, 4000); // 4 सेकंड बाद अगली खबर
+        };
+
+        window.speechSynthesis.speak(speechUtterance);
+    }
+
+    // पेज लोड होने पर डेटा लोड करें
+    document.addEventListener('DOMContentLoaded', loadNewsData);
+
+    // स्क्रीन पर क्लिक करने पर ब्रॉडकास्ट शुरू करें
+    window.onclick = () => {
+        if (!window.speechSynthesis.speaking && newsItems.length > 0) {
+            startBroadcasting();
+        }
+    };
+</script>
+</body>
+</html>
