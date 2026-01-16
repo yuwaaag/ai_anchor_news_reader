@@ -2,13 +2,13 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>PTN News - Visual Fix</title>
+    <title>PTN News - 100% Guaranteed Fix</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         .studio { position: relative; width: 100vw; height: 100vh; background: url('studio.jpg') center/cover no-repeat; }
         
-        /* विज़ुअल बॉक्स का सांचा */
-        #visualBox { 
+        /* विज़ुअल बॉक्स */
+        #visualBoxContainer { 
             position: absolute; right: 4%; top: 10%; width: 42%; height: 40%; 
             border: 4px solid #00f2ff; border-radius: 12px; overflow: hidden; 
             box-shadow: 0 0 30px rgba(0, 242, 255, 0.5); z-index: 2; background: #000;
@@ -26,26 +26,24 @@
 <body>
 
 <div class="studio">
-    <div id="visualBox"></div>
-
-    <div class="script-window"><div id="teleprompter">PTN NEWS: शुरू करने के लिए क्लिक करें...</div></div>
+    <div id="visualBoxContainer"></div>
+    <div class="script-window"><div id="teleprompter">PTN NEWS: शुरू करने के लिए यहाँ क्लिक करें...</div></div>
     <div class="anchor-box"><canvas id="anchorCanvas"></canvas></div>
     <video id="hiddenVid" muted loop crossorigin="anonymous"><source src="anchor_video.mp4" type="video/mp4"></video>
     <div class="ticker-bar"><marquee id="flashTicker">PTN NEWS LIVE</marquee></div>
 </div>
 
 <script>
+    // 🔴 अपनी CSV लिंक यहाँ डालें
     const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTZcfTxhcB7LltOPkXuTBsQ4CRNa2KZfb6EQ2lxx-eXFVhACj3YI4mH4tSeTSx-K_Wf1sgk0419ZDkf/pub?output=csv"; 
 
     let newsItems = [];
     let currentIndex = 0;
-    let currentPhotoWord = ""; // यह याद रखेगा कि अभी कौन सी फोटो चल रही है
-
     const video = document.getElementById('hiddenVid');
     const canvas = document.getElementById('anchorCanvas');
     const ctx = canvas.getContext('2d');
 
-    // क्रोमा की फंक्शन
+    // क्रोमा की लॉजिक
     function renderChroma() {
         if (video.paused) return;
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -57,49 +55,58 @@
         requestAnimationFrame(renderChroma);
     }
 
-    // 🟢 मास्टर विजुअल इंजन: जो फोटो को जबरदस्ती बदलेगा
-    function updateVisual(word) {
-        const container = document.getElementById("visualBox");
-        // कीवर्ड साफ करना
-        let cleanWord = word ? word.replace(/[^a-zA-Z0-9 ]/g, "").trim() : "news";
+    // 🟢 मज़बूत विजुअल इंजन: जो हर बार नया HTML एलिमेंट बनाएगा
+    function forceUpdateVisual(keyword) {
+        const container = document.getElementById("visualBoxContainer");
+        let cleanWord = keyword ? keyword.replace(/[^a-zA-Z0-9 ]/g, "").trim() : "breaking news";
         
-        // पुरानी फोटो को डिलीट करके नई बनाना
-        container.innerHTML = `<img src="https://loremflickr.com/800/450/${encodeURIComponent(cleanWord)}?v=${Math.random()}" 
-                                    style="width:100%; height:100%; object-fit:cover; opacity:1;">`;
+        // पुरानी फोटो को पूरी तरह मिटाकर नया टैग बनाना (यही चाबी है!)
+        container.innerHTML = ""; 
+        const newImg = document.createElement("img");
+        newImg.style.width = "100%";
+        newImg.style.height = "100%";
+        newImg.style.objectFit = "cover";
         
-        currentPhotoWord = cleanWord; 
-        console.log("Visual Updated to: " + cleanWord);
+        // रैंडम आईडी ताकि ब्राउज़र पुरानी फोटो न पकड़े
+        const cacheBuster = Date.now();
+        newImg.src = `https://loremflickr.com/800/450/${encodeURIComponent(cleanWord)}?random=${cacheBuster}`;
+        
+        container.appendChild(newImg);
     }
 
-    async function loadNews() {
-        const res = await fetch(csvUrl + "?t=" + Date.now()); // No-Cache
-        const data = await res.text();
-        const rows = data.split('\n').slice(1);
-        newsItems = rows.map(r => {
-            const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            return { 
-                script: c[0]?.replace(/"/g,"").trim(), 
-                visual: c[1]?.replace(/"/g,"").trim(), 
-                flash: c[2]?.replace(/"/g,"").trim() 
-            };
-        }).filter(i => i.script);
-        if(newsItems.length) startBroadcast();
+    async function loadNewsData() {
+        try {
+            // गूगल शीट से ताज़ा डेटा खींचना
+            const res = await fetch(csvUrl + "?cb=" + Date.now());
+            const data = await res.text();
+            const rows = data.split('\n').slice(1);
+            newsItems = rows.map(r => {
+                const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                return { 
+                    script: c[0]?.replace(/"/g,"").trim(), 
+                    visual: c[1]?.replace(/"/g,"").trim(), 
+                    flash: c[2]?.replace(/"/g,"").trim() 
+                };
+            }).filter(i => i.script);
+            
+            if(newsItems.length) startNewsCycle();
+        } catch(e) { console.error("Data load failed"); }
     }
 
-    function startBroadcast() {
+    function startNewsCycle() {
         const item = newsItems[currentIndex];
         const prompter = document.getElementById("teleprompter");
 
-        // 1. टेक्स्ट और टिकर अपडेट
+        // 1. स्क्रीन पर टेक्स्ट और विजुअल तुरंत बदलें
         prompter.style.transition = "none";
         prompter.style.top = "100%";
         prompter.innerText = item.script;
         document.getElementById("flashTicker").innerText = "PTN BREAKING: " + item.flash;
+        
+        // विजुअल को पक्का अपडेट करें
+        forceUpdateVisual(item.visual);
 
-        // 2. विजुअल को न्यूज़ के हिसाब से सेट करें
-        updateVisual(item.visual);
-
-        // 3. न्यूज़ बोलना शुरू
+        // 2. एंकर की आवाज़
         window.speechSynthesis.cancel();
         const speech = new SpeechSynthesisUtterance(item.script);
         speech.lang = 'hi-IN';
@@ -118,14 +125,21 @@
 
         speech.onend = () => {
             video.pause();
+            // अगली न्यूज़ पर जाएँ
             currentIndex = (currentIndex + 1) % newsItems.length;
-            setTimeout(startBroadcast, 2000); // अगली न्यूज़ पर जाएं
+            
+            // अगर दोबारा पहली न्यूज़ पर आ गए हैं, तो डेटा फिर से रिफ्रेश करें
+            if(currentIndex === 0) {
+                loadNewsData(); 
+            } else {
+                setTimeout(startNewsCycle, 1500);
+            }
         };
 
         window.speechSynthesis.speak(speech);
     }
 
-    window.onclick = () => { if(!newsItems.length) loadNews(); };
+    window.onclick = () => { if(!newsItems.length) loadNewsData(); };
 </script>
 </body>
 </html>
