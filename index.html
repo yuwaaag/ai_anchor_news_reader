@@ -2,7 +2,7 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>PTN News - AI Visual Engine</title>
+    <title>PTN News - Stable Stock Engine</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         .studio { position: relative; width: 100vw; height: 100vh; background: url('studio.jpg') center/cover no-repeat; }
@@ -13,8 +13,9 @@
             border: 4px solid #00f2ff; border-radius: 12px; overflow: hidden; 
             box-shadow: 0 0 30px rgba(0, 242, 255, 0.5); z-index: 2; background: #000;
         }
-        /* इमेज पर फेड इफेक्ट */
-        #newsImg { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1s ease-in-out; }
+        
+        /* इमेज सेटिंग */
+        #newsImg { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.8s ease-in-out; }
 
         /* स्क्रिप्ट विंडो */
         .script-window { 
@@ -44,8 +45,8 @@
 <body>
 
 <div class="studio">
-    <div class="visual-box"><img id="newsImg" src=""></div>
-    <div class="script-window"><div id="teleprompter">क्लिक करें और न्यूज़ शुरू करें...</div></div>
+    <div class="visual-box"><img id="newsImg" src="" onerror="this.src='https://loremflickr.com/800/450/news'"></div>
+    <div class="script-window"><div id="teleprompter">PTN NEWS: शुरू करने के लिए क्लिक करें...</div></div>
     <div class="anchor-box"><canvas id="anchorCanvas"></canvas></div>
     <video id="hiddenVid" muted loop crossorigin="anonymous"><source src="anchor_video.mp4" type="video/mp4"></video>
     <div class="ticker-bar"><marquee scrollamount="12" id="flashTicker">PTN NEWS LIVE</marquee></div>
@@ -57,7 +58,7 @@
 
     let newsItems = [];
     let currentNewsIndex = 0;
-    let visualTimer = null; // फोटो बदलने का टाइमर
+    let visualTimer = null;
 
     const video = document.getElementById('hiddenVid');
     const canvas = document.getElementById('anchorCanvas');
@@ -73,7 +74,7 @@
             let r = frame.data[i * 4 + 0];
             let g = frame.data[i * 4 + 1];
             let b = frame.data[i * 4 + 2];
-            if (g > 90 && g > r * 1.4 && g > b * 1.4) { // Green Adjustment
+            if (g > 90 && g > r * 1.4 && g > b * 1.4) { 
                 frame.data[i * 4 + 3] = 0;
             }
         }
@@ -81,28 +82,36 @@
         requestAnimationFrame(renderChroma);
     }
 
-    // --- 2. AI इमेज जेनरेटर (The Visual Fix) ---
+    // --- 2. Stable Visual Engine (LoremFlickr) ---
     function loadNextImage(keyword) {
-        // कीवर्ड की सफाई (ताकि "America" सही से जाए)
+        // कीवर्ड की गहरी सफाई (ताकि "America" में कोई गड़बड़ न हो)
         let cleanKeyword = keyword.replace(/[^a-zA-Z0-9 ]/g, "").trim();
-        if (!cleanKeyword) cleanKeyword = "News Studio";
-
-        const randomSeed = Math.floor(Math.random() * 99999);
         
-        // 1. पुरानी इमेज को धुंधला करें
+        // अगर कीवर्ड खाली है तो 'news' दिखाओ
+        if (!cleanKeyword || cleanKeyword.length < 2) cleanKeyword = "breaking news";
+
+        const randomSeed = Math.floor(Math.random() * 999999);
+        
+        // इमेज को फीड आउट करें
         imgElement.style.opacity = "0";
 
-        // 2. नया लिंक तैयार करें (Pollinations AI)
-        // यह लिंक आपके कीवर्ड के हिसाब से तुरंत फोटो बनाएगा
-        const aiUrl = `https://image.pollinations.ai/prompt/photorealistic_news_footage_of_${encodeURIComponent(cleanKeyword)}?width=800&height=450&nologo=true&seed=${randomSeed}`;
+        // LoremFlickr URL (यह कभी ब्लॉक नहीं होता)
+        // cleanKeyword का इस्तेमाल करके फोटो ढूंढेगा
+        const stockUrl = `https://loremflickr.com/800/450/${encodeURIComponent(cleanKeyword)}?lock=${randomSeed}`;
 
-        // 3. बैकग्राउंड में फोटो लोड करें
+        // इमेज पहले बैकग्राउंड में लोड होगी
         const tempLoader = new Image();
-        tempLoader.src = aiUrl;
+        tempLoader.src = stockUrl;
         
         tempLoader.onload = () => {
-            imgElement.src = aiUrl;
-            imgElement.style.opacity = "1"; // फोटो तैयार होते ही दिखाएं
+            imgElement.src = stockUrl;
+            imgElement.style.opacity = "1"; // लोड होने के बाद ही दिखेगी
+        };
+        
+        // अगर फोटो न मिले तो बैकअप
+        tempLoader.onerror = () => {
+             imgElement.src = "https://loremflickr.com/800/450/news";
+             imgElement.style.opacity = "1";
         };
     }
 
@@ -112,32 +121,29 @@
             const response = await fetch(csvUrl);
             const data = await response.text();
             
-            // CSV Parsing (बहुत सावधानी से सफाई)
+            // CSV Parsing (Hidden Characters को हटाना)
             const rows = data.split('\n').slice(1);
             newsItems = rows.map(row => {
-                // यह Regex कोट्स और एक्स्ट्रा स्पेस हटा देगा
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 return {
                     script: cols[0]?.replace(/["\r\n]/g, "").trim(),
                     visual: cols[1]?.replace(/["\r\n]/g, "").trim(),
                     flash: cols[2]?.replace(/["\r\n]/g, "").trim()
                 };
-            }).filter(item => item.script); // खाली लाइन हटा दें
+            }).filter(item => item.script); 
 
             if (newsItems.length > 0) {
-                runNewsCycle(); // न्यूज़ शुरू
+                runNewsCycle();
             } else {
-                alert("CSV खाली है या लिंक गलत है!");
+                alert("CSV लिंक चेक करें!");
             }
         } catch (error) {
             console.error(error);
-            alert("CSV लोड नहीं हुई। लिंक चेक करें।");
         }
     }
 
-    // --- 4. न्यूज़ चलाने का इंजन ---
+    // --- 4. न्यूज़ साइकिल ---
     function runNewsCycle() {
-        // एंकर और ऑडियो रिसेट
         window.speechSynthesis.cancel();
         if (visualTimer) clearInterval(visualTimer);
 
@@ -150,19 +156,18 @@
         prompter.innerText = currentNews.script;
         document.getElementById("flashTicker").innerText = "BREAKING NEWS: " + currentNews.flash;
 
-        // --- विजुअल लॉजिक ---
-        // पहली फोटो तुरंत लोड करें
+        // फोटो लोड करें
         loadNextImage(currentNews.visual);
         
-        // खबर के दौरान हर 10 सेकंड में फोटो बदलें
+        // हर 10 सेकंड में फोटो रिफ्रेश (Optional)
         visualTimer = setInterval(() => {
             loadNextImage(currentNews.visual);
         }, 10000);
 
-        // --- ऑडियो और वीडियो ---
+        // ऑडियो और एंकर
         const speech = new SpeechSynthesisUtterance(currentNews.script);
         speech.lang = 'hi-IN';
-        speech.rate = 0.9; // एंकर की स्पीड
+        speech.rate = 0.9;
 
         speech.onstart = () => {
             video.play();
@@ -170,9 +175,8 @@
             canvas.height = video.videoHeight;
             renderChroma();
             
-            // टेक्स्ट स्क्रॉल शुरू
             setTimeout(() => {
-                const duration = currentNews.script.length * 0.13; // स्क्रॉल स्पीड
+                const duration = currentNews.script.length * 0.13; 
                 prompter.style.transition = `top ${duration}s linear`;
                 prompter.style.top = `-${prompter.offsetHeight + 50}px`;
             }, 500);
@@ -180,22 +184,14 @@
 
         speech.onend = () => {
             video.pause();
-            // अगली न्यूज़ पर जाएँ
             currentNewsIndex++;
-            
-            // अगर ख़बरें खत्म हो गईं, तो शुरू से (0)
-            if (currentNewsIndex >= newsItems.length) {
-                currentNewsIndex = 0;
-            }
-
-            // 1 सेकंड के बाद अगली न्यूज़ चलाएं
+            if (currentNewsIndex >= newsItems.length) currentNewsIndex = 0;
             setTimeout(runNewsCycle, 1000);
         };
 
         window.speechSynthesis.speak(speech);
     }
 
-    // क्लिक करने पर शुरू होगा
     window.onclick = () => {
         if (newsItems.length === 0) initNews();
     };
