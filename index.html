@@ -2,22 +2,22 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>PTN News - Stable Stock Engine</title>
+    <title>PTN News - Unlimited Visuals</title>
     <style>
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         .studio { position: relative; width: 100vw; height: 100vh; background: url('studio.jpg') center/cover no-repeat; }
 
-        /* विज़ुअल बॉक्स */
-        .visual-box { 
+        /* विज़ुअल बॉक्स (अब यह खाली रहेगा, कोड इसमें इमेज भरेगा) */
+        #visualContainer { 
             position: absolute; right: 4%; top: 10%; width: 42%; height: 40%; 
             border: 4px solid #00f2ff; border-radius: 12px; overflow: hidden; 
             box-shadow: 0 0 30px rgba(0, 242, 255, 0.5); z-index: 2; background: #000;
         }
         
-        /* इमेज सेटिंग */
-        #newsImg { width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.8s ease-in-out; }
+        /* डायनामिक इमेज स्टाइल */
+        .dynamic-photo { width: 100%; height: 100%; object-fit: cover; animation: fadeIn 1s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* स्क्रिप्ट विंडो */
         .script-window { 
             position: absolute; left: 4%; top: 10%; width: 40%; height: 55%; 
             background: rgba(0, 0, 0, 0.8); border-left: 8px solid #ff0000; 
@@ -25,7 +25,6 @@
         }
         #teleprompter { position: relative; font-size: 30px; line-height: 1.6; color: #fff; top: 100%; font-weight: 500; }
 
-        /* एंकर */
         .anchor-box { 
             position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; 
             display: flex; justify-content: flex-end; align-items: flex-end; z-index: 10; pointer-events: none; 
@@ -33,7 +32,6 @@
         #anchorCanvas { max-width: 60%; max-height: 90%; object-fit: contain; margin-bottom: -5px; }
         #hiddenVid { display: none; }
 
-        /* टिकर */
         .ticker-bar { 
             position: absolute; bottom: 0; width: 100%; height: 80px; 
             background: linear-gradient(90deg, #cc0000, #990000); 
@@ -45,7 +43,8 @@
 <body>
 
 <div class="studio">
-    <div class="visual-box"><img id="newsImg" src="" onerror="this.src='https://loremflickr.com/800/450/news'"></div>
+    <div id="visualContainer"></div>
+
     <div class="script-window"><div id="teleprompter">PTN NEWS: शुरू करने के लिए क्लिक करें...</div></div>
     <div class="anchor-box"><canvas id="anchorCanvas"></canvas></div>
     <video id="hiddenVid" muted loop crossorigin="anonymous"><source src="anchor_video.mp4" type="video/mp4"></video>
@@ -63,7 +62,7 @@
     const video = document.getElementById('hiddenVid');
     const canvas = document.getElementById('anchorCanvas');
     const ctx = canvas.getContext('2d');
-    const imgElement = document.getElementById("newsImg");
+    // नोट: imgElement अब डायरेक्ट नहीं मिलेगा, हम उसे बनाएंगे
 
     // --- 1. क्रोमा की (Green Screen) ---
     function renderChroma() {
@@ -82,46 +81,35 @@
         requestAnimationFrame(renderChroma);
     }
 
-    // --- 2. Stable Visual Engine (LoremFlickr) ---
-    function loadNextImage(keyword) {
-        // कीवर्ड की गहरी सफाई (ताकि "America" में कोई गड़बड़ न हो)
+    // --- 2. The DOM Destroyer (इमेज बनाने का नया तरीका) ---
+    function forceNewVisual(keyword) {
+        const container = document.getElementById("visualContainer");
+        
+        // 1. पुराने कचरे को साफ करें (Destroy old image)
+        container.innerHTML = ''; 
+
+        // 2. कीवर्ड सफाई
         let cleanKeyword = keyword.replace(/[^a-zA-Z0-9 ]/g, "").trim();
-        
-        // अगर कीवर्ड खाली है तो 'news' दिखाओ
-        if (!cleanKeyword || cleanKeyword.length < 2) cleanKeyword = "breaking news";
+        if (!cleanKeyword || cleanKeyword.length < 2) cleanKeyword = "news studio";
 
-        const randomSeed = Math.floor(Math.random() * 999999);
+        // 3. नया इमेज टैग बनाएँ (Create fresh element)
+        const newImg = document.createElement("img");
+        newImg.className = "dynamic-photo"; // CSS क्लास लगाएं
         
-        // इमेज को फीड आउट करें
-        imgElement.style.opacity = "0";
+        // यूनिक ID ताकि ब्राउज़र कैश न करे
+        const uniqueID = Date.now() + Math.random();
+        newImg.src = `https://loremflickr.com/800/450/${encodeURIComponent(cleanKeyword)}?lock=${uniqueID}`;
 
-        // LoremFlickr URL (यह कभी ब्लॉक नहीं होता)
-        // cleanKeyword का इस्तेमाल करके फोटो ढूंढेगा
-        const stockUrl = `https://loremflickr.com/800/450/${encodeURIComponent(cleanKeyword)}?lock=${randomSeed}`;
-
-        // इमेज पहले बैकग्राउंड में लोड होगी
-        const tempLoader = new Image();
-        tempLoader.src = stockUrl;
-        
-        tempLoader.onload = () => {
-            imgElement.src = stockUrl;
-            imgElement.style.opacity = "1"; // लोड होने के बाद ही दिखेगी
-        };
-        
-        // अगर फोटो न मिले तो बैकअप
-        tempLoader.onerror = () => {
-             imgElement.src = "https://loremflickr.com/800/450/news";
-             imgElement.style.opacity = "1";
-        };
+        // 4. कंटेनर में डालें
+        container.appendChild(newImg);
     }
 
-    // --- 3. CSV डेटा लोड करना ---
+    // --- 3. CSV डेटा लोड ---
     async function initNews() {
         try {
             const response = await fetch(csvUrl);
             const data = await response.text();
             
-            // CSV Parsing (Hidden Characters को हटाना)
             const rows = data.split('\n').slice(1);
             newsItems = rows.map(row => {
                 const cols = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
@@ -130,20 +118,21 @@
                     visual: cols[1]?.replace(/["\r\n]/g, "").trim(),
                     flash: cols[2]?.replace(/["\r\n]/g, "").trim()
                 };
-            }).filter(item => item.script); 
+            }).filter(item => item.script); // खाली लाइन हटा दें
 
             if (newsItems.length > 0) {
                 runNewsCycle();
             } else {
-                alert("CSV लिंक चेक करें!");
+                alert("CSV खाली है!");
             }
         } catch (error) {
             console.error(error);
         }
     }
 
-    // --- 4. न्यूज़ साइकिल ---
+    // --- 4. न्यूज़ इंजन ---
     function runNewsCycle() {
+        // पिछली न्यूज़ का सब कुछ बंद करें
         window.speechSynthesis.cancel();
         if (visualTimer) clearInterval(visualTimer);
 
@@ -156,15 +145,15 @@
         prompter.innerText = currentNews.script;
         document.getElementById("flashTicker").innerText = "BREAKING NEWS: " + currentNews.flash;
 
-        // फोटो लोड करें
-        loadNextImage(currentNews.visual);
+        // 🟢 विजुअल: पुराने को मिटाकर नया लगाएं
+        forceNewVisual(currentNews.visual);
         
-        // हर 10 सेकंड में फोटो रिफ्रेश (Optional)
+        // खबर के बीच में भी बदलते रहें
         visualTimer = setInterval(() => {
-            loadNextImage(currentNews.visual);
-        }, 10000);
+            forceNewVisual(currentNews.visual);
+        }, 12000);
 
-        // ऑडियो और एंकर
+        // ऑडियो
         const speech = new SpeechSynthesisUtterance(currentNews.script);
         speech.lang = 'hi-IN';
         speech.rate = 0.9;
@@ -184,8 +173,13 @@
 
         speech.onend = () => {
             video.pause();
+            
+            // इंडेक्स बढ़ाएं
             currentNewsIndex++;
+            // अगर लिस्ट खत्म, तो वापस 0 पर (Loop)
             if (currentNewsIndex >= newsItems.length) currentNewsIndex = 0;
+            
+            // अगली न्यूज़ शुरू
             setTimeout(runNewsCycle, 1000);
         };
 
