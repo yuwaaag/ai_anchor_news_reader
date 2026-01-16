@@ -2,64 +2,29 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>PTN News - Professional Auto-Chroma</title>
+    <title>PTN News - Final Visual Fix</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', Arial, sans-serif; }
-        
-        /* स्टूडियो बैकग्राउंड */
-        .studio { 
-            position: relative; width: 100vw; height: 100vh; 
-            background: url('studio.jpg') center/cover no-repeat; 
-        }
-
-        /* न्यूज़ विज़ुअल बॉक्स */
-        .visual-box { 
-            position: absolute; right: 5%; top: 12%; width: 40%; height: 38%; 
-            border: 4px solid #00f2ff; border-radius: 12px; overflow: hidden; 
-            box-shadow: 0 0 25px rgba(0, 242, 255, 0.6); z-index: 2;
-        }
-        #newsImg { width: 100%; height: 100%; object-fit: cover; transition: opacity 1s; }
-
-        /* टेलीप्रॉम्प्टर */
-        .script-window { 
-            position: absolute; left: 5%; top: 12%; width: 38%; height: 55%; 
-            background: rgba(0, 0, 0, 0.6); border-left: 8px solid #ff0000; 
-            padding: 25px; box-sizing: border-box; z-index: 2; overflow: hidden;
-        }
-        #teleprompter { position: relative; font-size: 32px; line-height: 1.8; color: #fff; top: 100%; }
-
-        /* एंकर कैनवास (Green Screen Removal Area) */
-        .anchor-box { 
-            position: absolute; right: 0; bottom: 0; width: 55%; height: 95%; 
-            z-index: 10; pointer-events: none; 
-        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        .studio { position: relative; width: 100vw; height: 100vh; background: url('studio.jpg') center/cover no-repeat; }
+        .visual-box { position: absolute; right: 5%; top: 12%; width: 40%; height: 38%; border: 4px solid #00f2ff; border-radius: 12px; overflow: hidden; z-index: 2; background: #111; }
+        #newsImg { width: 100%; height: 100%; object-fit: cover; opacity: 1; transition: opacity 0.5s; }
+        .script-window { position: absolute; left: 5%; top: 12%; width: 38%; height: 55%; background: rgba(0, 0, 0, 0.6); border-left: 8px solid #ff0000; padding: 25px; box-sizing: border-box; z-index: 2; overflow: hidden; }
+        #teleprompter { position: relative; font-size: 32px; line-height: 1.8; color: #fff; top: 100%; transition: none; }
+        .anchor-box { position: absolute; right: 0; bottom: 0; width: 55%; height: 95%; z-index: 10; pointer-events: none; }
         #anchorCanvas { width: 100%; height: 100%; object-fit: contain; }
-        #hiddenVid { display: none; } /* असली वीडियो छुपा रहेगा */
-
-        /* टिकर */
-        .ticker-bar { 
-            position: absolute; bottom: 0; width: 100%; height: 80px; 
-            background: linear-gradient(90deg, #ff0000, #800000); 
-            display: flex; align-items: center; z-index: 20; border-top: 4px solid #fff; 
-        }
+        #hiddenVid { display: none; }
+        .ticker-bar { position: absolute; bottom: 0; width: 100%; height: 80px; background: linear-gradient(90deg, #ff0000, #800000); display: flex; align-items: center; z-index: 20; border-top: 4px solid #fff; }
         marquee { font-size: 35px; font-weight: bold; color: white; width: 100%; }
     </style>
 </head>
 <body>
 
 <div class="studio">
-    <div class="visual-box"><img id="newsImg" src="https://image.pollinations.ai/prompt/news%20studio?nologo=true"></div>
-    <div class="script-window"><div id="teleprompter">PTN NEWS: शुरू करने के लिए क्लिक करें...</div></div>
-    
-    <div class="anchor-box">
-        <canvas id="anchorCanvas"></canvas>
-    </div>
-    
-    <video id="hiddenVid" muted loop crossorigin="anonymous">
-        <source src="anchor_video.mp4" type="video/mp4">
-    </video>
-
-    <div class="ticker-bar"><marquee scrollamount="12" id="flashTicker">PTN NEWS: ताज़ा खबरों के लिए जुड़े रहें...</marquee></div>
+    <div class="visual-box"><img id="newsImg" src=""></div>
+    <div class="script-window"><div id="teleprompter">लोड हो रहा है...</div></div>
+    <div class="anchor-box"><canvas id="anchorCanvas"></canvas></div>
+    <video id="hiddenVid" muted loop crossorigin="anonymous"><source src="anchor_video.mp4" type="video/mp4"></video>
+    <div class="ticker-bar"><marquee scrollamount="12" id="flashTicker">PTN NEWS</marquee></div>
 </div>
 
 <script>
@@ -72,56 +37,53 @@
     const canvas = document.getElementById('anchorCanvas');
     const ctx = canvas.getContext('2d');
 
-    // 🟢 क्रोमा की इंजन (हरे रंग को हटाने के लिए)
     function computeFrame() {
         if (video.paused || video.ended) return;
-        
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         let frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let l = frame.data.length / 4;
-
-        for (let i = 0; i < l; i++) {
-            let r = frame.data[i * 4 + 0];
-            let g = frame.data[i * 4 + 1];
-            let b = frame.data[i * 4 + 2];
-            
-            // अगर रंग हरा है (G > R और G > B), तो उसे पारदर्शी कर दो
-            if (g > 80 && g > r * 1.2 && g > b * 1.2) {
-                frame.data[i * 4 + 3] = 0; 
-            }
+        for (let i = 0; i < frame.data.length / 4; i++) {
+            let r = frame.data[i * 4 + 0], g = frame.data[i * 4 + 1], b = frame.data[i * 4 + 2];
+            if (g > 80 && g > r * 1.2 && g > b * 1.2) { frame.data[i * 4 + 3] = 0; }
         }
         ctx.putImageData(frame, 0, 0);
         requestAnimationFrame(computeFrame);
     }
 
     async function loadSheets() {
-        const response = await fetch(csvUrl);
-        const data = await response.text();
-        const rows = data.split('\n').slice(1);
-        newsItems = rows.map(r => {
-            const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-            return { script: c[0]?.replace(/"/g,""), visual: c[1]?.replace(/"/g,""), flash: c[2]?.replace(/"/g,"") };
-        }).filter(i => i.script);
-        startBroadcasting();
+        try {
+            const response = await fetch(csvUrl);
+            const data = await response.text();
+            const rows = data.split('\n').slice(1);
+            newsItems = rows.map(r => {
+                const c = r.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                return { script: c[0]?.replace(/"/g,""), visual: c[1]?.replace(/"/g,""), flash: c[2]?.replace(/"/g,"") };
+            }).filter(i => i.script);
+            startBroadcasting();
+        } catch(e) { console.error("Sheet error"); }
     }
 
     function startBroadcasting() {
+        if(newsItems.length === 0) return;
         const current = newsItems[newsIndex];
         const prompter = document.getElementById("teleprompter");
-        
+        const img = document.getElementById("newsImg");
+
+        // 1. UI & Scroll Reset
+        prompter.style.transition = "none"; 
+        prompter.style.top = "100%"; 
         prompter.innerText = current.script;
         document.getElementById("flashTicker").innerText = "BREAKING: " + current.flash;
         
-        // विजुअल चेंजर
+        // 2. Visual Update Fix
         clearInterval(visualInterval);
         const updateImg = () => {
-            document.getElementById("newsImg").src = `https://image.pollinations.ai/prompt/${encodeURIComponent(current.visual)}+${Math.random()}?nologo=true`;
+            const randomID = Math.floor(Math.random() * 1000);
+            img.src = `https://pollinations.ai/p/${encodeURIComponent(current.visual)}?width=800&height=450&seed=${randomID}&nologo=true`;
         };
         updateImg();
         visualInterval = setInterval(updateImg, 15000);
 
-        // आवाज़ और स्क्रॉलिंग
-        prompter.style.top = "100%";
+        // 3. Audio & Animation
         window.speechSynthesis.cancel();
         const msg = new SpeechSynthesisUtterance(current.script);
         msg.lang = 'hi-IN';
@@ -132,14 +94,17 @@
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             computeFrame();
-            prompter.style.transition = `top ${current.script.length * 0.08}s linear`;
-            prompter.style.top = "-100%";
+            // Scroll calculation
+            setTimeout(() => {
+                prompter.style.transition = `top ${current.script.length * 0.12}s linear`;
+                prompter.style.top = `-${prompter.offsetHeight + 50}px`;
+            }, 100);
         };
 
         msg.onend = () => {
             video.pause();
             newsIndex = (newsIndex + 1) % newsItems.length;
-            setTimeout(startBroadcasting, 3000);
+            setTimeout(startBroadcasting, 2000);
         };
         window.speechSynthesis.speak(msg);
     }
